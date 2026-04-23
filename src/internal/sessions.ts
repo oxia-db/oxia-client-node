@@ -8,15 +8,15 @@
 
 import { randomUUID } from 'node:crypto';
 import { OxiaError } from '../exceptions.js';
-import { fromNumber, toNumber } from './longs.js';
-import { callUnary } from './rpc.js';
-import type { ServiceDiscovery } from './serviceDiscovery.js';
 import type {
   CloseSessionResponse,
   CreateSessionResponse,
   KeepAliveResponse,
 } from '../proto/generated/client.js';
 import { sleep } from './backoff.js';
+import { fromNumber, toNumber } from './longs.js';
+import { callUnary } from './rpc.js';
+import type { ServiceDiscovery } from './serviceDiscovery.js';
 
 const DEFAULT_HEARTBEAT_FLOOR_MS = 2_000;
 

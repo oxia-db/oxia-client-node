@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { credentials, type Interceptor } from '@grpc/grpc-js';
+import { type Interceptor, credentials } from '@grpc/grpc-js';
 import type { Authentication } from '../auth.js';
 import { OxiaClientClient } from '../proto/generated/client.js';
 import { authInterceptor, unaryDeadlineInterceptor } from './interceptors.js';

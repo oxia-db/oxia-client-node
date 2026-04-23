@@ -6,18 +6,8 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import Long from 'long';
-import {
-  KeyComparisonType,
-  type ListResponse,
-  type OxiaClientClient,
-  type PutResponse,
-  type RangeScanResponse,
-  type ReadResponse,
-  type SecondaryIndex,
-  Status,
-  type WriteResponse,
-} from './proto/generated/client.js';
+import type Long from 'long';
+import type { Authentication } from './auth.js';
 import {
   InvalidOptionsError,
   KeyNotFoundError,
@@ -25,7 +15,6 @@ import {
   SessionNotFoundError,
   UnexpectedVersionIdError,
 } from './exceptions.js';
-import type { Authentication } from './auth.js';
 import { compareWithSlash } from './internal/compare.js';
 import { ConnectionPool } from './internal/connectionPool.js';
 import { fromNumber } from './internal/longs.js';
@@ -35,6 +24,17 @@ import { callUnary, firstStreamMessage } from './internal/rpc.js';
 import { SequenceUpdatesStream } from './internal/sequenceUpdates.js';
 import { type Leader, ServiceDiscovery } from './internal/serviceDiscovery.js';
 import { SessionManager } from './internal/sessions.js';
+import {
+  type KeyComparisonType,
+  type ListResponse,
+  type OxiaClientClient,
+  type PutResponse,
+  type RangeScanResponse,
+  type ReadResponse,
+  type SecondaryIndex,
+  Status,
+  type WriteResponse,
+} from './proto/generated/client.js';
 import {
   type CloseableAsyncIterable,
   ComparisonType,
@@ -297,9 +297,7 @@ export class OxiaClient {
         throw new InvalidOptionsError('sequenceKeysDeltas requires partitionKey');
       }
       if (opts.expectedVersionId !== undefined) {
-        throw new InvalidOptionsError(
-          'sequenceKeysDeltas is incompatible with expectedVersionId',
-        );
+        throw new InvalidOptionsError('sequenceKeysDeltas is incompatible with expectedVersionId');
       }
     }
 
@@ -453,7 +451,14 @@ export class OxiaClient {
 
     if (singleShard) {
       const leader = this.discovery.getLeaderForKey(key, opts.partitionKey);
-      return await getSingleShard(leader.client, leader.shard, key, cmp, includeValue, opts.useIndex);
+      return await getSingleShard(
+        leader.client,
+        leader.shard,
+        key,
+        cmp,
+        includeValue,
+        opts.useIndex,
+      );
     }
 
     // Non-EQUAL or secondary-index lookup without a partition key: fan out
@@ -615,9 +620,7 @@ function coerceValue(v: string | Uint8Array): Uint8Array {
   return v;
 }
 
-function toSecondaryIndexes(
-  indexes: Record<string, string> | undefined,
-): SecondaryIndex[] {
+function toSecondaryIndexes(indexes: Record<string, string> | undefined): SecondaryIndex[] {
   if (!indexes) return [];
   return Object.entries(indexes).map(([indexName, secondaryKey]) => ({
     indexName,

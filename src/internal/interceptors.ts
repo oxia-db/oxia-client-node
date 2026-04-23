@@ -7,12 +7,12 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 
 import {
+  status as GrpcStatus,
   InterceptingCall,
   type Interceptor,
   type InterceptorOptions,
   type Listener,
-  Metadata,
-  status as GrpcStatus,
+  type Metadata,
 } from '@grpc/grpc-js';
 import type { Authentication } from '../auth.js';
 

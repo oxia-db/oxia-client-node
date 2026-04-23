@@ -41,7 +41,14 @@ export function compareWithSlash(a: string, b: string): number {
   return 0;
 }
 
-function cmpSlice(a: string, aStart: number, aEnd: number, b: string, bStart: number, bEnd: number): number {
+function cmpSlice(
+  a: string,
+  aStart: number,
+  aEnd: number,
+  b: string,
+  bStart: number,
+  bEnd: number,
+): number {
   const aLen = aEnd - aStart;
   const bLen = bEnd - bStart;
   const n = Math.min(aLen, bLen);

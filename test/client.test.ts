@@ -8,7 +8,12 @@
 
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EXPECTED_RECORD_DOES_NOT_EXIST, KeyNotFoundError, OxiaClient, UnexpectedVersionIdError } from '../src/index.js';
+import {
+  EXPECTED_RECORD_DOES_NOT_EXIST,
+  KeyNotFoundError,
+  OxiaClient,
+  UnexpectedVersionIdError,
+} from '../src/index.js';
 import { OxiaContainer } from './oxiaContainer.js';
 
 const newKey = () => `/test-${randomUUID().replace(/-/g, '')}`;
@@ -64,9 +69,9 @@ describe('OxiaClient — phase 1 (put/get/delete, single shard)', () => {
   it('put with wrong expectedVersionId rejects', async () => {
     const k = newKey();
     await client.put(k, 'v0');
-    await expect(
-      client.put(k, 'v1', { expectedVersionId: 999_999 }),
-    ).rejects.toBeInstanceOf(UnexpectedVersionIdError);
+    await expect(client.put(k, 'v1', { expectedVersionId: 999_999 })).rejects.toBeInstanceOf(
+      UnexpectedVersionIdError,
+    );
   });
 
   it('get on missing key throws KeyNotFoundError', async () => {

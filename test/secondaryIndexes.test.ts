@@ -85,7 +85,10 @@ describe('OxiaClient — secondary-index FLOOR/CEILING/HIGHER across shards', ()
   });
 
   const lookup = async (q: string, cmp?: ComparisonType) => {
-    const r = await client.get(q, { useIndex: 'value-idx', ...(cmp !== undefined ? { comparisonType: cmp } : {}) });
+    const r = await client.get(q, {
+      useIndex: 'value-idx',
+      ...(cmp !== undefined ? { comparisonType: cmp } : {}),
+    });
     return { key: r.key, value: decode(r.value) };
   };
 

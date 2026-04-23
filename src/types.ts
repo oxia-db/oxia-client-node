@@ -6,8 +6,8 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { KeyComparisonType, type Version as PbVersion } from './proto/generated/client.js';
 import { toNumber, toOptionalNumber, toOptionalString } from './internal/longs.js';
+import { KeyComparisonType, type Version as PbVersion } from './proto/generated/client.js';
 
 /**
  * Key comparison mode for {@link OxiaClient.get}.

@@ -36,13 +36,7 @@ describe('compareWithSlash', () => {
     // Hierarchical order: at each segment boundary, a missing next segment
     // ranks before a present one. So /test/aa (ends after `aa`) comes
     // before /test/a/b (has another segment) even though `aa` > `a`.
-    expect(sorted).toEqual([
-      '/test/a',
-      '/test/aa',
-      '/test/a/b',
-      '/test/a/b/c',
-      '/test/aa/a',
-    ]);
+    expect(sorted).toEqual(['/test/a', '/test/aa', '/test/a/b', '/test/a/b/c', '/test/aa/a']);
   });
 
   it('is antisymmetric: sign(cmp(a,b)) + sign(cmp(b,a)) === 0', () => {

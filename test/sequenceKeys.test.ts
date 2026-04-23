@@ -28,9 +28,9 @@ describe('OxiaClient — sequence keys', () => {
   });
 
   it('rejects sequenceKeysDeltas without partitionKey', async () => {
-    await expect(
-      client.put('a', '0', { sequenceKeysDeltas: [1] }),
-    ).rejects.toBeInstanceOf(InvalidOptionsError);
+    await expect(client.put('a', '0', { sequenceKeysDeltas: [1] })).rejects.toBeInstanceOf(
+      InvalidOptionsError,
+    );
   });
 
   it('rejects sequenceKeysDeltas combined with expectedVersionId', async () => {

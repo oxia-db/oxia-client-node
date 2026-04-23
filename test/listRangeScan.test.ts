@@ -73,10 +73,7 @@ describe('OxiaClient — list / rangeScan / deleteRange (multi-shard)', () => {
 
     await client.deleteRange(`${prefix}/b`, `${prefix}/d`);
 
-    expect(await client.list(`${prefix}/a`, `${prefix}/e`)).toEqual([
-      `${prefix}/a`,
-      `${prefix}/d`,
-    ]);
+    expect(await client.list(`${prefix}/a`, `${prefix}/e`)).toEqual([`${prefix}/a`, `${prefix}/d`]);
   });
 });
 

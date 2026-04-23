@@ -8,14 +8,10 @@
 
 import { status as GrpcStatus, type ServiceError } from '@grpc/grpc-js';
 import type {
-  Notification as PbNotification,
   NotificationBatch,
+  Notification as PbNotification,
 } from '../proto/generated/client.js';
-import {
-  type CloseableAsyncIterable,
-  type Notification,
-  NotificationType,
-} from '../types.js';
+import type { CloseableAsyncIterable, Notification, NotificationType } from '../types.js';
 import { AsyncQueue } from './asyncQueue.js';
 import { Backoff } from './backoff.js';
 import { fromNumber, toNumber } from './longs.js';

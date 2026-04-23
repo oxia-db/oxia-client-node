@@ -12,10 +12,10 @@ import {
   type OxiaClientClient,
   ShardKeyRouter,
 } from '../proto/generated/client.js';
-import { toNumber } from './longs.js';
 import { Backoff } from './backoff.js';
 import type { ConnectionPool } from './connectionPool.js';
 import { xxh332 } from './hash.js';
+import { toNumber } from './longs.js';
 
 export interface HashRange {
   minInclusive: number;
@@ -109,7 +109,9 @@ export class ServiceDiscovery {
       this.abort.signal.addEventListener('abort', onAbort, { once: true });
 
       stream.on('data', (msg) => {
-        const nsAssignments = msg.namespaces[this.namespace] as NamespaceShardsAssignment | undefined;
+        const nsAssignments = msg.namespaces[this.namespace] as
+          | NamespaceShardsAssignment
+          | undefined;
         if (nsAssignments) {
           try {
             this.applyAssignments(nsAssignments);
