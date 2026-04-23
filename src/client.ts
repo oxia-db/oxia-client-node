@@ -9,11 +9,14 @@
 import Long from 'long';
 import {
   KeyComparisonType,
+  type ListResponse,
+  type OxiaClientClient,
   type PutResponse,
+  type RangeScanResponse,
   type ReadResponse,
+  type SecondaryIndex,
   Status,
   type WriteResponse,
-  type OxiaClientClient,
 } from './proto/generated/client.js';
 import {
   InvalidOptionsError,
@@ -22,11 +25,13 @@ import {
   SessionNotFoundError,
   UnexpectedVersionIdError,
 } from './exceptions.js';
+import { compareWithSlash } from './internal/compare.js';
 import { ConnectionPool } from './internal/connectionPool.js';
-import { ServiceDiscovery } from './internal/serviceDiscovery.js';
-import { callUnary, firstStreamMessage } from './internal/rpc.js';
-import { ComparisonType, type GetResult, type PutResult, versionFromProto } from './types.js';
 import { fromNumber } from './internal/longs.js';
+import { mergeSorted } from './internal/mergeStreams.js';
+import { callUnary, firstStreamMessage } from './internal/rpc.js';
+import { type Leader, ServiceDiscovery } from './internal/serviceDiscovery.js';
+import { ComparisonType, type GetResult, type PutResult, versionFromProto } from './types.js';
 
 export interface OxiaClientOptions {
   /** Oxia namespace. Defaults to `default`. */
@@ -38,6 +43,13 @@ export interface OxiaClientOptions {
 export interface PutOptions {
   partitionKey?: string;
   expectedVersionId?: number;
+  /** Secondary index entries: `{ indexName: secondaryKey }`. */
+  secondaryIndexes?: Record<string, string>;
+  /**
+   * Server-assigned sequential suffixes for the key. Requires `partitionKey`
+   * and is incompatible with `expectedVersionId`.
+   */
+  sequenceKeysDeltas?: number[];
 }
 
 export interface DeleteOptions {
@@ -45,10 +57,31 @@ export interface DeleteOptions {
   expectedVersionId?: number;
 }
 
+export interface DeleteRangeOptions {
+  /** If set, only the shard owning this partition key is affected. */
+  partitionKey?: string;
+}
+
 export interface GetOptions {
   partitionKey?: string;
   comparisonType?: ComparisonType;
   includeValue?: boolean;
+  /** Name of a secondary index to query. */
+  useIndex?: string;
+}
+
+export interface ListOptions {
+  /** If set, only the shard owning this partition key is queried. */
+  partitionKey?: string;
+  /** Name of a secondary index to query. */
+  useIndex?: string;
+}
+
+export interface RangeScanOptions {
+  /** If set, only the shard owning this partition key is scanned. */
+  partitionKey?: string;
+  /** Name of a secondary index to query. */
+  useIndex?: string;
 }
 
 /**
@@ -87,6 +120,21 @@ export class OxiaClient {
 
   async put(key: string, value: string | Uint8Array, opts: PutOptions = {}): Promise<PutResult> {
     this.ensureOpen();
+
+    if (opts.sequenceKeysDeltas !== undefined) {
+      if (opts.sequenceKeysDeltas.length === 0) {
+        throw new InvalidOptionsError('sequenceKeysDeltas must not be empty');
+      }
+      if (opts.partitionKey === undefined) {
+        throw new InvalidOptionsError('sequenceKeysDeltas requires partitionKey');
+      }
+      if (opts.expectedVersionId !== undefined) {
+        throw new InvalidOptionsError(
+          'sequenceKeysDeltas is incompatible with expectedVersionId',
+        );
+      }
+    }
+
     const leader = this.discovery.getLeaderForKey(key, opts.partitionKey);
     const pr = {
       key,
@@ -94,8 +142,8 @@ export class OxiaClient {
       expectedVersionId:
         opts.expectedVersionId !== undefined ? fromNumber(opts.expectedVersionId) : undefined,
       partitionKey: opts.partitionKey,
-      sequenceKeyDelta: [] as Long[],
-      secondaryIndexes: [],
+      sequenceKeyDelta: (opts.sequenceKeysDeltas ?? []).map(fromNumber),
+      secondaryIndexes: toSecondaryIndexes(opts.secondaryIndexes),
     };
     const resp = await callUnary<WriteResponse>((cb) =>
       leader.client.write(
@@ -141,16 +189,122 @@ export class OxiaClient {
     return true;
   }
 
+  async deleteRange(
+    minKeyInclusive: string,
+    maxKeyExclusive: string,
+    opts: DeleteRangeOptions = {},
+  ): Promise<void> {
+    this.ensureOpen();
+    const leaders =
+      opts.partitionKey !== undefined
+        ? [this.discovery.getLeaderForKey(opts.partitionKey, opts.partitionKey)]
+        : this.discovery.getAllShardLeaders();
+
+    await Promise.all(
+      leaders.map(async (leader) => {
+        const resp = await callUnary<WriteResponse>((cb) =>
+          leader.client.write(
+            {
+              shard: fromNumber(leader.shard),
+              puts: [],
+              deletes: [],
+              deleteRanges: [
+                {
+                  startInclusive: minKeyInclusive,
+                  endExclusive: maxKeyExclusive,
+                },
+              ],
+            },
+            cb,
+          ),
+        );
+        checkStatus(resp.deleteRanges[0].status);
+      }),
+    );
+  }
+
   async get(key: string, opts: GetOptions = {}): Promise<GetResult> {
     this.ensureOpen();
     const cmp = opts.comparisonType ?? ComparisonType.EQUAL;
-    if (cmp !== ComparisonType.EQUAL && opts.partitionKey === undefined) {
-      throw new InvalidOptionsError(
-        'Non-EQUAL get() across all shards is not supported yet (phase 2)',
-      );
+    const includeValue = opts.includeValue ?? true;
+    const singleShard =
+      opts.partitionKey !== undefined ||
+      (cmp === ComparisonType.EQUAL && opts.useIndex === undefined);
+
+    if (singleShard) {
+      const leader = this.discovery.getLeaderForKey(key, opts.partitionKey);
+      return await getSingleShard(leader.client, leader.shard, key, cmp, includeValue, opts.useIndex);
     }
-    const leader = this.discovery.getLeaderForKey(key, opts.partitionKey);
-    return await getSingleShard(leader.client, leader.shard, key, cmp, opts.includeValue ?? true);
+
+    // Non-EQUAL or secondary-index lookup without a partition key: fan out
+    // to every shard and pick the best match by hierarchical key order.
+    const leaders = this.discovery.getAllShardLeaders();
+    const settled = await Promise.allSettled(
+      leaders.map((leader) =>
+        getSingleShard(leader.client, leader.shard, key, cmp, includeValue, opts.useIndex),
+      ),
+    );
+    const results: GetResult[] = [];
+    for (const s of settled) {
+      if (s.status === 'fulfilled') {
+        results.push(s.value);
+      } else if (!(s.reason instanceof KeyNotFoundError)) {
+        throw s.reason;
+      }
+    }
+    if (results.length === 0) throw new KeyNotFoundError();
+    results.sort((a, b) => compareWithSlash(a.key, b.key));
+    switch (cmp) {
+      case ComparisonType.EQUAL:
+      case ComparisonType.CEILING:
+      case ComparisonType.HIGHER:
+        return results[0];
+      case ComparisonType.FLOOR:
+      case ComparisonType.LOWER:
+        return results[results.length - 1];
+      default:
+        throw new OxiaError(`unknown comparison type: ${cmp}`);
+    }
+  }
+
+  async list(
+    minKeyInclusive: string,
+    maxKeyExclusive: string,
+    opts: ListOptions = {},
+  ): Promise<string[]> {
+    this.ensureOpen();
+    const leaders =
+      opts.partitionKey !== undefined
+        ? [this.discovery.getLeaderForKey(opts.partitionKey, opts.partitionKey)]
+        : this.discovery.getAllShardLeaders();
+
+    const perShard = await Promise.all(
+      leaders.map((leader) =>
+        listFromShard(leader, minKeyInclusive, maxKeyExclusive, opts.useIndex),
+      ),
+    );
+    if (perShard.length === 1) return perShard[0];
+    const all = perShard.flat();
+    all.sort(compareWithSlash);
+    return all;
+  }
+
+  rangeScan(
+    minKeyInclusive: string,
+    maxKeyExclusive: string,
+    opts: RangeScanOptions = {},
+  ): AsyncIterable<GetResult> {
+    this.ensureOpen();
+    const leaders =
+      opts.partitionKey !== undefined
+        ? [this.discovery.getLeaderForKey(opts.partitionKey, opts.partitionKey)]
+        : this.discovery.getAllShardLeaders();
+
+    const streams = leaders.map((leader) =>
+      rangeScanFromShard(leader, minKeyInclusive, maxKeyExclusive, opts.useIndex),
+    );
+    if (streams.length === 1) return streams[0];
+    return mergeSorted(streams, (a, b) => compareWithSlash(a.key, b.key));
   }
 
   async close(): Promise<void> {
@@ -172,6 +326,16 @@ function coerceValue(v: string | Uint8Array): Uint8Array {
   return v;
 }
 
+function toSecondaryIndexes(
+  indexes: Record<string, string> | undefined,
+): SecondaryIndex[] {
+  if (!indexes) return [];
+  return Object.entries(indexes).map(([indexName, secondaryKey]) => ({
+    indexName,
+    secondaryKey,
+  }));
+}
+
 function toPutResult(requestedKey: string, resp: PutResponse): PutResult {
   if (!resp.version) {
     throw new OxiaError('put response missing version');
@@ -188,6 +352,7 @@ async function getSingleShard(
   key: string,
   cmp: KeyComparisonType,
   includeValue: boolean,
+  useIndex: string | undefined,
 ): Promise<GetResult> {
   const stream = client.read({
     shard: fromNumber(shard),
@@ -196,6 +361,7 @@ async function getSingleShard(
         key,
         includeValue,
         comparisonType: cmp,
+        secondaryIndexName: useIndex,
       },
     ],
   });
@@ -210,6 +376,55 @@ async function getSingleShard(
     value: getRes.value,
     version: versionFromProto(getRes.version),
   };
+}
+
+async function listFromShard(
+  leader: Leader,
+  minKeyInclusive: string,
+  maxKeyExclusive: string,
+  useIndex: string | undefined,
+): Promise<string[]> {
+  const stream = leader.client.list({
+    shard: fromNumber(leader.shard),
+    startInclusive: minKeyInclusive,
+    endExclusive: maxKeyExclusive,
+    secondaryIndexName: useIndex,
+    includeInternalKeys: false,
+  });
+  const keys: string[] = [];
+  for await (const resp of stream as AsyncIterable<ListResponse>) {
+    if (resp.keys?.length) keys.push(...resp.keys);
+  }
+  return keys;
+}
+
+async function* rangeScanFromShard(
+  leader: Leader,
+  minKeyInclusive: string,
+  maxKeyExclusive: string,
+  useIndex: string | undefined,
+): AsyncIterable<GetResult> {
+  const stream = leader.client.rangeScan({
+    shard: fromNumber(leader.shard),
+    startInclusive: minKeyInclusive,
+    endExclusive: maxKeyExclusive,
+    secondaryIndexName: useIndex,
+    includeInternalKeys: false,
+  });
+  try {
+    for await (const resp of stream as AsyncIterable<RangeScanResponse>) {
+      for (const rec of resp.records ?? []) {
+        if (!rec.version) continue;
+        yield {
+          key: rec.key ?? '',
+          value: rec.value,
+          version: versionFromProto(rec.version),
+        };
+      }
+    }
+  } finally {
+    stream.cancel();
+  }
 }
 
 function checkStatus(status: Status): void {

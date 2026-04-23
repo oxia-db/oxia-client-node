@@ -11,7 +11,10 @@ export {
   type OxiaClientOptions,
   type PutOptions,
   type DeleteOptions,
+  type DeleteRangeOptions,
   type GetOptions,
+  type ListOptions,
+  type RangeScanOptions,
 } from './client.js';
 export {
   ComparisonType,
