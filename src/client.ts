@@ -25,6 +25,7 @@ import {
   SessionNotFoundError,
   UnexpectedVersionIdError,
 } from './exceptions.js';
+import type { Authentication } from './auth.js';
 import { compareWithSlash } from './internal/compare.js';
 import { ConnectionPool } from './internal/connectionPool.js';
 import { fromNumber } from './internal/longs.js';
@@ -64,6 +65,17 @@ export interface OxiaClientOptions {
    * creates. If unset, a random UUID hex is generated.
    */
   clientIdentifier?: string;
+  /**
+   * Deadline applied to every unary RPC (put, delete, session management).
+   * Streaming subscriptions (notifications, shard assignments, sequence
+   * updates, list, rangeScan) are left unbounded. Default: 30_000.
+   */
+  requestTimeoutMs?: number;
+  /**
+   * Optional {@link Authentication} implementation whose credentials are
+   * attached as gRPC metadata on every outgoing RPC.
+   */
+  authentication?: Authentication;
 }
 
 export interface PutOptions {
@@ -148,7 +160,10 @@ export class OxiaClient {
     options: OxiaClientOptions = {},
   ): Promise<OxiaClient> {
     const namespace = options.namespace ?? 'default';
-    const pool = new ConnectionPool();
+    const pool = new ConnectionPool({
+      requestTimeoutMs: options.requestTimeoutMs ?? 30_000,
+      authentication: options.authentication,
+    });
     const discovery = new ServiceDiscovery(pool, serviceAddress, namespace);
     try {
       await discovery.start(options.initTimeoutMs ?? 30_000);

@@ -6,6 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
+export { type Authentication, TokenAuthentication } from './auth.js';
 export {
   OxiaClient,
   type OxiaClientOptions,

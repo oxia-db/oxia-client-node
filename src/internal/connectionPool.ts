@@ -6,8 +6,15 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-import { credentials } from '@grpc/grpc-js';
+import { credentials, type Interceptor } from '@grpc/grpc-js';
+import type { Authentication } from '../auth.js';
 import { OxiaClientClient } from '../proto/generated/client.js';
+import { authInterceptor, unaryDeadlineInterceptor } from './interceptors.js';
+
+export interface ConnectionPoolOptions {
+  requestTimeoutMs?: number;
+  authentication?: Authentication;
+}
 
 /**
  * Maintains one `@grpc/grpc-js` channel/stub per server address. All shard
@@ -16,7 +23,18 @@ import { OxiaClientClient } from '../proto/generated/client.js';
  */
 export class ConnectionPool {
   private readonly clients = new Map<string, OxiaClientClient>();
+  private readonly interceptors: Interceptor[];
   private closed = false;
+
+  constructor(options: ConnectionPoolOptions = {}) {
+    this.interceptors = [];
+    if (options.requestTimeoutMs !== undefined) {
+      this.interceptors.push(unaryDeadlineInterceptor(options.requestTimeoutMs));
+    }
+    if (options.authentication !== undefined) {
+      this.interceptors.push(authInterceptor(options.authentication));
+    }
+  }
 
   get(address: string): OxiaClientClient {
     if (this.closed) {
@@ -24,7 +42,8 @@ export class ConnectionPool {
     }
     let c = this.clients.get(address);
     if (c === undefined) {
-      c = new OxiaClientClient(address, credentials.createInsecure());
+      const clientOptions = this.interceptors.length > 0 ? { interceptors: this.interceptors } : {};
+      c = new OxiaClientClient(address, credentials.createInsecure(), clientOptions);
       this.clients.set(address, c);
     }
     return c;
