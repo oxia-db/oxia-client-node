@@ -154,19 +154,6 @@ All client errors extend `OxiaError`:
 | `SessionNotFoundError`      | ephemeral `put` referenced a session the server has closed |
 | `InvalidOptionsError`       | incompatible option combination (e.g. `sequenceKeysDeltas` without `partitionKey`) |
 
-## Known rough edges
-
-- Cross-shard `list` / `rangeScan` merging uses a pre-order
-  (segment-by-segment) comparator. The server's list output on a single
-  shard is ordered by the slash-count-prefixed encoding it stores in
-  pebble, so mixed-depth ranges across multiple shards may interleave
-  differently than the server would within a single shard. Same-depth
-  ranges behave identically. This matches the behavior of the Python
-  client.
-
-- No request batching: every public call maps to one RPC. If you need
-  high throughput, the Java or Go clients batch writes automatically.
-
 ## License
 
 Apache License 2.0. See `LICENSE` and `NOTICE`.
