@@ -15,13 +15,17 @@ export {
   type GetOptions,
   type ListOptions,
   type RangeScanOptions,
+  type SequenceUpdatesOptions,
 } from './client.js';
 export {
+  type CloseableAsyncIterable,
   ComparisonType,
   EXPECTED_RECORD_DOES_NOT_EXIST,
-  Version,
-  type PutResult,
   type GetResult,
+  type Notification,
+  NotificationType,
+  type PutResult,
+  Version,
 } from './types.js';
 export {
   OxiaError,

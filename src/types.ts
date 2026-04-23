@@ -81,3 +81,37 @@ export interface GetResult {
   value: Uint8Array | undefined;
   version: Version;
 }
+
+/** Kind of change a {@link Notification} represents. */
+export const NotificationType = {
+  KEY_CREATED: 0,
+  KEY_MODIFIED: 1,
+  KEY_DELETED: 2,
+  KEY_RANGE_DELETED: 3,
+} as const;
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
+/** A single change event in the Oxia database. */
+export interface Notification {
+  /** The key whose state changed. */
+  key: string;
+  /** Kind of change. */
+  type: NotificationType;
+  /**
+   * Current version id of the record, or `0` for delete events.
+   */
+  versionId: number;
+  /**
+   * For {@link NotificationType.KEY_RANGE_DELETED}, the exclusive end of
+   * the deleted range. `undefined` for other notification types.
+   */
+  keyRangeEnd?: string;
+}
+
+/**
+ * An AsyncIterable with an explicit teardown hook. Returned by
+ * {@link OxiaClient.getNotifications} and {@link OxiaClient.getSequenceUpdates}.
+ */
+export interface CloseableAsyncIterable<T> extends AsyncIterable<T> {
+  close(): void;
+}

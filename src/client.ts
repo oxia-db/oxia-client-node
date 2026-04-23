@@ -29,10 +29,19 @@ import { compareWithSlash } from './internal/compare.js';
 import { ConnectionPool } from './internal/connectionPool.js';
 import { fromNumber } from './internal/longs.js';
 import { mergeSorted } from './internal/mergeStreams.js';
+import { NotificationStream } from './internal/notifications.js';
 import { callUnary, firstStreamMessage } from './internal/rpc.js';
+import { SequenceUpdatesStream } from './internal/sequenceUpdates.js';
 import { type Leader, ServiceDiscovery } from './internal/serviceDiscovery.js';
 import { SessionManager } from './internal/sessions.js';
-import { ComparisonType, type GetResult, type PutResult, versionFromProto } from './types.js';
+import {
+  type CloseableAsyncIterable,
+  ComparisonType,
+  type GetResult,
+  type Notification,
+  type PutResult,
+  versionFromProto,
+} from './types.js';
 
 export interface OxiaClientOptions {
   /** Oxia namespace. Defaults to `default`. */
@@ -104,6 +113,11 @@ export interface RangeScanOptions {
   partitionKey?: string;
   /** Name of a secondary index to query. */
   useIndex?: string;
+}
+
+export interface SequenceUpdatesOptions {
+  /** Partition key for shard routing. Required. */
+  partitionKey: string;
 }
 
 /**
@@ -353,6 +367,37 @@ export class OxiaClient {
     );
     if (streams.length === 1) return streams[0];
     return mergeSorted(streams, (a, b) => compareWithSlash(a.key, b.key));
+  }
+
+  /**
+   * Subscribe to change notifications across every shard. Returns an
+   * AsyncIterable that yields one {@link Notification} per change; the
+   * returned object's `close()` method stops the subscription and ends
+   * the iterator. Multiple subscriptions can run concurrently.
+   */
+  getNotifications(): CloseableAsyncIterable<Notification> {
+    this.ensureOpen();
+    return new NotificationStream(this.discovery);
+  }
+
+  /**
+   * Subscribe to updates on a sequential key. Yields the latest assigned
+   * key each time the sequence advances; the returned object's `close()`
+   * method ends the subscription.
+   *
+   * @param prefixKey The key prefix used with sequence-key puts.
+   * @param options   Requires `partitionKey` to route to the owning shard.
+   */
+  getSequenceUpdates(
+    prefixKey: string,
+    options: SequenceUpdatesOptions,
+  ): CloseableAsyncIterable<string> {
+    this.ensureOpen();
+    if (!options.partitionKey) {
+      throw new InvalidOptionsError('getSequenceUpdates requires a partitionKey');
+    }
+    const leader = this.discovery.getLeaderForKey(options.partitionKey, options.partitionKey);
+    return new SequenceUpdatesStream(this.discovery, leader.shard, prefixKey);
   }
 
   async close(): Promise<void> {
