@@ -1,0 +1,45 @@
+{
+  "name": "oxia",
+  "version": "0.1.0",
+  "description": "Oxia client SDK for Node.js",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "proto"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "gen-proto": "bash gen-proto.sh",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check src test",
+    "format": "biome format --write src test"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.0",
+    "@grpc/grpc-js": "^1.12.0",
+    "long": "^5.2.3",
+    "@node-rs/xxhash": "^1.7.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/node": "^20.14.0",
+    "testcontainers": "^10.13.0",
+    "ts-proto": "^2.2.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
