@@ -31,6 +31,7 @@ import { fromNumber } from './internal/longs.js';
 import { mergeSorted } from './internal/mergeStreams.js';
 import { callUnary, firstStreamMessage } from './internal/rpc.js';
 import { type Leader, ServiceDiscovery } from './internal/serviceDiscovery.js';
+import { SessionManager } from './internal/sessions.js';
 import { ComparisonType, type GetResult, type PutResult, versionFromProto } from './types.js';
 
 export interface OxiaClientOptions {
@@ -38,11 +39,32 @@ export interface OxiaClientOptions {
   namespace?: string;
   /** Timeout for the initial shard-assignment fetch, in ms. Defaults to 30_000. */
   initTimeoutMs?: number;
+  /**
+   * Session timeout in milliseconds for ephemeral records. Must be at
+   * least 2000ms when `heartbeatIntervalMs` is left unset. Default: 30_000.
+   */
+  sessionTimeoutMs?: number;
+  /**
+   * Heartbeat cadence for keeping sessions alive. Must be < `sessionTimeoutMs`.
+   * If unset, defaults to `max(sessionTimeoutMs / 10, 2000ms)`, capped at
+   * `sessionTimeoutMs - 1`.
+   */
+  heartbeatIntervalMs?: number;
+  /**
+   * Client identity tag stored on every ephemeral record this client
+   * creates. If unset, a random UUID hex is generated.
+   */
+  clientIdentifier?: string;
 }
 
 export interface PutOptions {
   partitionKey?: string;
   expectedVersionId?: number;
+  /**
+   * If true, the record is tied to this client's session on its shard
+   * and is automatically removed when the session closes or expires.
+   */
+  ephemeral?: boolean;
   /** Secondary index entries: `{ indexName: secondaryKey }`. */
   secondaryIndexes?: Record<string, string>;
   /**
@@ -94,11 +116,17 @@ export interface RangeScanOptions {
 export class OxiaClient {
   private readonly pool: ConnectionPool;
   private readonly discovery: ServiceDiscovery;
+  private readonly sessionManager: SessionManager;
   private closed = false;
 
-  private constructor(pool: ConnectionPool, discovery: ServiceDiscovery) {
+  private constructor(
+    pool: ConnectionPool,
+    discovery: ServiceDiscovery,
+    sessionManager: SessionManager,
+  ) {
     this.pool = pool;
     this.discovery = discovery;
+    this.sessionManager = sessionManager;
   }
 
   static async connect(
@@ -115,7 +143,13 @@ export class OxiaClient {
       pool.close();
       throw err;
     }
-    return new OxiaClient(pool, discovery);
+    const sessionManager = new SessionManager({
+      discovery,
+      sessionTimeoutMs: options.sessionTimeoutMs ?? 30_000,
+      heartbeatIntervalMs: options.heartbeatIntervalMs,
+      clientIdentifier: options.clientIdentifier,
+    });
+    return new OxiaClient(pool, discovery, sessionManager);
   }
 
   async put(key: string, value: string | Uint8Array, opts: PutOptions = {}): Promise<PutResult> {
@@ -136,7 +170,16 @@ export class OxiaClient {
     }
 
     const leader = this.discovery.getLeaderForKey(key, opts.partitionKey);
-    const pr = {
+    const pr: {
+      key: string;
+      value: Uint8Array;
+      expectedVersionId?: Long;
+      partitionKey?: string;
+      sequenceKeyDelta: Long[];
+      secondaryIndexes: SecondaryIndex[];
+      sessionId?: Long;
+      clientIdentity?: string;
+    } = {
       key,
       value: coerceValue(value),
       expectedVersionId:
@@ -145,6 +188,11 @@ export class OxiaClient {
       sequenceKeyDelta: (opts.sequenceKeysDeltas ?? []).map(fromNumber),
       secondaryIndexes: toSecondaryIndexes(opts.secondaryIndexes),
     };
+    if (opts.ephemeral) {
+      const session = await this.sessionManager.getSession(leader.shard);
+      pr.sessionId = fromNumber(session.sessionId);
+      pr.clientIdentity = session.clientIdentifier;
+    }
     const resp = await callUnary<WriteResponse>((cb) =>
       leader.client.write(
         {
@@ -310,6 +358,9 @@ export class OxiaClient {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    // Close sessions first so the server cleans up ephemerals before the
+    // channels go away.
+    await this.sessionManager.close();
     await this.discovery.close();
     this.pool.close();
   }
