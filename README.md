@@ -17,7 +17,7 @@ coordination system for large-scale distributed systems.
 
 ## Requirements
 
-* Node.js 18+
+* Node.js 20+
 
 ## Install
 

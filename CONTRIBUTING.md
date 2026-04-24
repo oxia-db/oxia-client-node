@@ -30,7 +30,7 @@ If you have questions regarding Oxia, feel free to start a new discussion: https
 
 Requirements:
 
-* Node.js 18+
+* Node.js 20+
 * [protoc](https://protobuf.dev/installation/) (on macOS: `brew install protobuf`)
 * Docker (for integration tests via testcontainers)
 
