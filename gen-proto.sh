@@ -18,7 +18,11 @@ mkdir -p "$OUT_DIR"
 #   oneof=unions                -> tagged union for `oneof`
 #   forceLong=long              -> int64 as Long (no precision loss)
 #   useExactTypes=false         -> don't require discriminator properties
-npx --no-install protoc \
+# Invoke the system `protoc` directly. Newer npm versions treat
+# `npx protoc` as a registry package lookup rather than a PATH
+# fallthrough, which breaks on CI runners where protoc is installed
+# by a setup action.
+protoc \
   --plugin=protoc-gen-ts_proto="./node_modules/.bin/protoc-gen-ts_proto" \
   --ts_proto_out="$OUT_DIR" \
   --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,useOptionals=messages,oneof=unions,forceLong=long,useExactTypes=false \
