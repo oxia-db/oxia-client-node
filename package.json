@@ -26,7 +26,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome check src test",
-    "format": "biome format --write src test"
+    "format": "biome format --write src test",
+    "docs": "typedoc"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.0",
@@ -39,6 +40,7 @@
     "@types/node": "^20.14.0",
     "testcontainers": "^10.13.0",
     "ts-proto": "^2.2.0",
+    "typedoc": "^0.26.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }

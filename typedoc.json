@@ -1,0 +1,29 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "name": "oxia (Node.js client)",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "sort": ["source-order"],
+  "navigationLinks": {
+    "GitHub": "https://github.com/oxia-db/oxia-client-node",
+    "Oxia": "https://oxia-db.github.io"
+  },
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "intentionallyNotExported": [
+    "KeyComparisonType.EQUAL",
+    "KeyComparisonType.FLOOR",
+    "KeyComparisonType.CEILING",
+    "KeyComparisonType.LOWER",
+    "KeyComparisonType.HIGHER"
+  ]
+}

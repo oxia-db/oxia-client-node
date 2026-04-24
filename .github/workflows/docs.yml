@@ -1,0 +1,54 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build & publish TypeDoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '27.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate proto code
+        run: npm run gen-proto
+
+      - name: Build TypeDoc
+        run: npm run docs
+
+      # Publishes the freshly generated HTML to the shared Oxia docs site.
+      # Requires a repository secret `DOCS_DEPLOY_KEY`: the PRIVATE half of
+      # an SSH deploy key whose PUBLIC half is registered on
+      # oxia-db/oxia-db.github.io with write access.
+      - name: Publish to oxia-db.github.io
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
+          external_repository: oxia-db/oxia-db.github.io
+          publish_branch: main
+          publish_dir: ./docs/api
+          destination_dir: client-node
+          commit_message: 'docs(client-node): sync from ${{ github.sha }}'
+          user_name: 'oxia-docs-bot'
+          user_email: 'oxia-docs-bot@users.noreply.github.com'
