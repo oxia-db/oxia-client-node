@@ -58,7 +58,7 @@
     "long": "^5.2.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.0",
+    "@biomejs/biome": "^2.4.13",
     "@types/node": "^20.14.0",
     "testcontainers": "^10.13.0",
     "ts-proto": "^2.2.0",
