@@ -48,7 +48,7 @@ jobs:
           external_repository: oxia-db/oxia-db.github.io
           publish_branch: main
           publish_dir: ./docs/api
-          destination_dir: client-node/api
+          destination_dir: public/oxia-client-node/api
           commit_message: 'docs(client-node): sync from ${{ github.sha }}'
           user_name: 'oxia-docs-bot'
           user_email: 'oxia-docs-bot@users.noreply.github.com'
