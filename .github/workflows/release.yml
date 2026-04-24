@@ -70,7 +70,10 @@ jobs:
       # `prepublishOnly` in package.json runs gen-proto + build again; the
       # earlier steps are so we get a clean lint/typecheck/test signal before
       # we touch npm.
+      #
+      # Auth comes from npm Trusted Publishing: the `id-token: write`
+      # permission above exchanges this run's OIDC token for an npm auth
+      # token transparently, scoped to @oxia-db/client. No long-lived
+      # secret required.
       - name: Publish with provenance
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
