@@ -1,5 +1,5 @@
 {
-  "name": "@oxia/client",
+  "name": "@oxia-db/client",
   "version": "0.1.0",
   "description": "Oxia client SDK for Node.js",
   "license": "Apache-2.0",

@@ -2,7 +2,7 @@
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": ["src/index.ts"],
   "out": "docs/api",
-  "name": "@oxia/client",
+  "name": "@oxia-db/client",
   "readme": "README.md",
   "includeVersion": true,
   "excludeInternal": true,
