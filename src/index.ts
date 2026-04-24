@@ -8,16 +8,23 @@
 
 export { type Authentication, TokenAuthentication } from './auth.js';
 export {
-  OxiaClient,
-  type OxiaClientOptions,
-  type PutOptions,
   type DeleteOptions,
   type DeleteRangeOptions,
   type GetOptions,
   type ListOptions,
+  OxiaClient,
+  type OxiaClientOptions,
+  type PutOptions,
   type RangeScanOptions,
   type SequenceUpdatesOptions,
 } from './client.js';
+export {
+  InvalidOptionsError,
+  KeyNotFoundError,
+  OxiaError,
+  SessionNotFoundError,
+  UnexpectedVersionIdError,
+} from './exceptions.js';
 export {
   type CloseableAsyncIterable,
   ComparisonType,
@@ -28,10 +35,3 @@ export {
   type PutResult,
   Version,
 } from './types.js';
-export {
-  OxiaError,
-  InvalidOptionsError,
-  KeyNotFoundError,
-  UnexpectedVersionIdError,
-  SessionNotFoundError,
-} from './exceptions.js';
