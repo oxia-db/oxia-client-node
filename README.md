@@ -168,6 +168,22 @@ All client errors extend `OxiaError`:
 | `SessionNotFoundError`      | ephemeral `put` referenced a session the server has closed |
 | `InvalidOptionsError`       | incompatible option combination (e.g. `sequenceKeysDeltas` without `partitionKey`) |
 
+## Verifying the published package
+
+Every release is published from a GitHub Actions run with
+[SLSA provenance](https://slsa.dev/spec/v1.0/provenance) signed by
+Sigstore. You can verify that a given `@oxia-db/client` version came from
+this repository's `release.yml` workflow — with no long-lived npm token
+anywhere in the chain — before installing it:
+
+```bash
+npm audit signatures @oxia-db/client
+```
+
+npm also shows the provenance attestation on the
+[package page](https://www.npmjs.com/package/@oxia-db/client) under
+*Provenance*.
+
 ## License
 
 Apache License 2.0. See `LICENSE` and `NOTICE`.
