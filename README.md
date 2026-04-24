@@ -1,15 +1,29 @@
-# @oxia-db/client
+# Oxia Node.js Client SDK
 
-Node.js / TypeScript client for [Oxia](https://oxia-db.github.io), modeled
-after the official Python client.
+[![CI](https://github.com/oxia-db/oxia-client-node/actions/workflows/ci.yml/badge.svg)](https://github.com/oxia-db/oxia-client-node/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@oxia-db/client.svg)](https://www.npmjs.com/package/@oxia-db/client)
+[![License](https://img.shields.io/badge/license-Apache%202.0-white.svg)](https://github.com/oxia-db/oxia-client-node/blob/main/LICENSE)
+
+Node.js / TypeScript client for [Oxia](https://oxia-db.github.io/), a scalable metadata store and
+coordination system for large-scale distributed systems.
+
+<p align="center">
+  <a href="https://oxia-db.github.io/docs/getting-started">Getting Started</a> |
+  <a href="https://oxia-db.github.io/docs/clients/node">Documentation</a> |
+  <a href="https://oxia-db.github.io/oxia-client-node/api/">TSDoc reference</a> |
+  <a href="https://www.npmjs.com/package/@oxia-db/client">npm</a> |
+  <a href="https://github.com/oxia-db/oxia/discussions/new/choose">Discussion</a>
+</p>
+
+## Requirements
+
+* Node.js 18+
 
 ## Install
 
 ```bash
 npm install @oxia-db/client
 ```
-
-Requires Node.js 18+.
 
 ## Quick start
 
