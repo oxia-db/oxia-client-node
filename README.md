@@ -1,4 +1,4 @@
-# oxia
+# @oxia/client
 
 Node.js / TypeScript client for [Oxia](https://oxia-db.github.io), modeled
 after the official Python client.
@@ -6,7 +6,7 @@ after the official Python client.
 ## Install
 
 ```bash
-npm install oxia
+npm install @oxia/client
 ```
 
 Requires Node.js 18+.
@@ -14,7 +14,7 @@ Requires Node.js 18+.
 ## Quick start
 
 ```ts
-import { OxiaClient, EXPECTED_RECORD_DOES_NOT_EXIST } from 'oxia';
+import { OxiaClient, EXPECTED_RECORD_DOES_NOT_EXIST } from '@oxia/client';
 
 const client = await OxiaClient.connect('localhost:6648');
 try {
@@ -117,7 +117,7 @@ for await (const latestKey of updates) {
 ## Authentication
 
 ```ts
-import { OxiaClient, TokenAuthentication } from 'oxia';
+import { OxiaClient, TokenAuthentication } from '@oxia/client';
 
 // Static bearer token:
 const client = await OxiaClient.connect('oxia.example.com:6648', {
@@ -134,7 +134,7 @@ You can also implement the `Authentication` interface directly to add
 arbitrary gRPC metadata headers to every outgoing RPC:
 
 ```ts
-import type { Authentication } from 'oxia';
+import type { Authentication } from '@oxia/client';
 
 class MyAuth implements Authentication {
   generateCredentials() {
