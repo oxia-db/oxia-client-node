@@ -3,6 +3,7 @@
 [![CI](https://github.com/oxia-db/oxia-client-node/actions/workflows/ci.yml/badge.svg)](https://github.com/oxia-db/oxia-client-node/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@oxia-db/client.svg)](https://www.npmjs.com/package/@oxia-db/client)
 [![License](https://img.shields.io/badge/license-Apache%202.0-white.svg)](https://github.com/oxia-db/oxia-client-node/blob/main/LICENSE)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foxia-db%2Foxia-client-node.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Foxia-db%2Foxia-client-node?ref=badge_shield)
 
 Node.js / TypeScript client for [Oxia](https://oxia-db.github.io/), a scalable metadata store and
 coordination system for large-scale distributed systems.
@@ -187,3 +188,6 @@ npm also shows the provenance attestation on the
 ## License
 
 Apache License 2.0. See `LICENSE` and `NOTICE`.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foxia-db%2Foxia-client-node.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Foxia-db%2Foxia-client-node?ref=badge_large)
